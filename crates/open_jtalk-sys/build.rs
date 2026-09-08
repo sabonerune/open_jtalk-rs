@@ -16,6 +16,8 @@ fn main() {
         } else {
             cmake_conf
         }
+    } else if target.starts_with("arm64ec") {
+        cmake_conf.define("CMAKE_GENERATOR_PLATFORM", "ARM64EC")
     } else {
         &mut cmake_conf
     };
