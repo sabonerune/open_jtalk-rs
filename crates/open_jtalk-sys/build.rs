@@ -62,6 +62,34 @@ fn main() {
 
     let dst_dir = cmake_conf.build();
     let lib_dir = dst_dir.join("lib");
+    if target.ends_with("-apple-darwin") {
+        let lib_dir_str = lib_dir.display();
+        let script = format!(
+            r#"
+            find {lib_dir_str} -type f -exec sh -c '
+            for f do
+                echo "=== $f ==="
+                otool -l "$f" 2>/dev/null |
+                grep -8 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX"
+            done
+            echo "done"
+            ' sh {{}} +
+        "#
+        );
+        let output = Command::new("/bin/bash")
+            .arg("-c")
+            .arg(script)
+            .output()
+            .expect("Failed to execute command");
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
+            println!("cargo::warning=stdout:{}", line);
+        }
+        for line in String::from_utf8_lossy(&output.stderr).lines() {
+            println!("cargo::warning=stderr:{}", line);
+        }
+    } else {
+        println!("cargo::warning=Not macOS target");
+    }
     println!("cargo:rustc-link-search={}", lib_dir.to_str().unwrap());
     println!("cargo:rustc-link-lib=openjtalk");
     generate_bindings(dst_dir.join("include"), include_dirs);
