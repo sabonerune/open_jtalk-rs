@@ -32,6 +32,24 @@ fn main() {
         cmake_conf.define("CMAKE_SYSTEM_VERSION", "1");
     }
 
+    // `MACOSX_DEPLOYMENT_TARGET`が未設定の場合`CMAKE_OSX_DEPLOYMENT_TARGET`を指定する
+    if target.ends_with("apple-darwin")
+        && env::var("MACOSX_DEPLOYMENT_TARGET").map_or(true, |v| v.is_empty())
+    {
+        let cmake_osx_deployment_target = Command::new(env::var("RUSTC").unwrap())
+            .arg("--target")
+            .arg(&target)
+            .arg("--print=deployment-target")
+            .output()
+            .unwrap();
+        let cmake_osx_deployment_target = str::from_utf8(&cmake_osx_deployment_target.stdout)
+            .unwrap()
+            .trim()
+            .strip_prefix("MACOSX_DEPLOYMENT_TARGET=")
+            .unwrap();
+        cmake_conf.define("CMAKE_OSX_DEPLOYMENT_TARGET", cmake_osx_deployment_target);
+    }
+
     // iOS SDKで必要な引数を指定する
     if target.contains("ios") {
         // iOSとiPhone simulatorは別扱いになる
